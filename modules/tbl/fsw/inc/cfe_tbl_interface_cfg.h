@@ -47,8 +47,10 @@
 **       This value should be kept as a multiple of 4, to maintain alignment of
 **       any possible neighboring fields without implicit padding.
 */
+#ifndef CFE_MISSION_TBL_MAX_NAME_LENGTH
 #define CFE_MISSION_TBL_MAX_NAME_LENGTH         CFE_MISSION_TBL_CFGVAL(MAX_NAME_LENGTH)
 #define DEFAULT_CFE_MISSION_TBL_MAX_NAME_LENGTH 16
+#endif
 
 /**
 **  \cfetblcfg Maximum Length of Full Table Name in messages
@@ -68,9 +70,11 @@
 **       This value should be kept as a multiple of 4, to maintain alignment of
 **       any possible neighboring fields without implicit padding.
 */
+#ifndef CFE_MISSION_TBL_MAX_FULL_NAME_LEN
 #define CFE_MISSION_TBL_MAX_FULL_NAME_LEN CFE_MISSION_TBL_CFGVAL(MAX_FULL_NAME_LEN)
 
 /* Default value calculated as: (CFE_MISSION_TBL_MAX_NAME_LENGTH + CFE_MISSION_MAX_API_LEN + 4) */
 #define DEFAULT_CFE_MISSION_TBL_MAX_FULL_NAME_LEN 40
+#endif
 
 #endif

@@ -44,8 +44,10 @@
 **       Note this affects the size of messages, so it must not cause any message
 **       to exceed the max length.
 */
+#ifndef CFE_MISSION_ES_MAX_APPLICATIONS
 #define CFE_MISSION_ES_MAX_APPLICATIONS         CFE_MISSION_ES_CFGVAL(MAX_APPLICATIONS)
 #define DEFAULT_CFE_MISSION_ES_MAX_APPLICATIONS 16
+#endif
 
 /**
 **  \cfeescfg Define Max Number of Performance IDs for messages
@@ -67,8 +69,10 @@
 **       to exceed the max length.
 **
 */
+#ifndef CFE_MISSION_ES_PERF_MAX_IDS
 #define CFE_MISSION_ES_PERF_MAX_IDS         CFE_MISSION_ES_CFGVAL(PERF_MAX_IDS)
 #define DEFAULT_CFE_MISSION_ES_PERF_MAX_IDS 128
+#endif
 
 /** \cfeescfg Maximum number of block sizes in pool structures
 **
@@ -89,8 +93,10 @@
 **
 **
 */
+#ifndef CFE_MISSION_ES_POOL_MAX_BUCKETS
 #define CFE_MISSION_ES_POOL_MAX_BUCKETS         CFE_MISSION_ES_CFGVAL(POOL_MAX_BUCKETS)
 #define DEFAULT_CFE_MISSION_ES_POOL_MAX_BUCKETS 17
+#endif
 
 /**
 **  \cfeescfg Maximum Length of CDS Name
@@ -107,8 +113,10 @@
 **       any possible neighboring fields without implicit padding.
 **
 */
+#ifndef CFE_MISSION_ES_CDS_MAX_NAME_LENGTH
 #define CFE_MISSION_ES_CDS_MAX_NAME_LENGTH         CFE_MISSION_ES_CFGVAL(CDS_MAX_NAME_LENGTH)
 #define DEFAULT_CFE_MISSION_ES_CDS_MAX_NAME_LENGTH 16
+#endif
 
 /**
 **  \cfeescfg Mission Default CRC algorithm
@@ -122,8 +130,10 @@
 **      Currently only CFE_ES_CrcType_16_ARC is supported (see brief in CFE_ES_CrcType_Enum
 **      definition in cfe_es_api_typedefs.h)
 */
+#ifndef CFE_MISSION_ES_DEFAULT_CRC
 #define CFE_MISSION_ES_DEFAULT_CRC         CFE_MISSION_ES_CFGVAL(DEFAULT_CRC)
 #define DEFAULT_CFE_MISSION_ES_DEFAULT_CRC CFE_ES_CrcType_16_ARC
+#endif
 
 /**
 **  \cfeescfg Maximum Length of Full CDS Name in messages
@@ -143,22 +153,30 @@
 **       This value should be kept as a multiple of 4, to maintain alignment of
 **       any possible neighboring fields without implicit padding.
 */
+#ifndef CFE_MISSION_ES_CDS_MAX_FULL_NAME_LEN
 #define CFE_MISSION_ES_CDS_MAX_FULL_NAME_LEN CFE_MISSION_ES_CFGVAL(CDS_MAX_FULL_NAME_LEN)
 
 /* Default value is calculated as: (CFE_MISSION_ES_CDS_MAX_NAME_LENGTH + CFE_MISSION_MAX_API_LEN + 4) */
 #define DEFAULT_CFE_MISSION_ES_CDS_MAX_FULL_NAME_LEN 40
+#endif
 
 #ifndef CFE_OMIT_DEPRECATED_6_8
 /* These names have been converted to an enum in cfe_es_api_typedefs.h */
 
 /** \name Checksum/CRC algorithm identifiers */
 
+#ifndef CFE_MISSION_ES_CRC_8
 #define CFE_MISSION_ES_CRC_8          CFE_MISSION_ES_CFGVAL(CRC_8)
 #define DEFAULT_CFE_MISSION_ES_CRC_8  CFE_ES_CrcType_CRC_8
+#endif
+#ifndef CFE_MISSION_ES_CRC_16
 #define CFE_MISSION_ES_CRC_16         CFE_MISSION_ES_CFGVAL(CRC_16)
 #define DEFAULT_CFE_MISSION_ES_CRC_16 CFE_ES_CrcType_CRC_16
+#endif
+#ifndef CFE_MISSION_ES_CRC_32
 #define CFE_MISSION_ES_CRC_32         CFE_MISSION_ES_CFGVAL(CRC_32)
 #define DEFAULT_CFE_MISSION_ES_CRC_32 CFE_ES_CrcType_CRC_32
+#endif
 
 #endif
 

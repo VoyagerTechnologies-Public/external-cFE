@@ -49,8 +49,10 @@
 **      system dependent and should be verified.  Total message size values that are
 **      checked against this configuration are defined by a 16 bit data word.
 */
+#ifndef CFE_MISSION_SB_MAX_SB_MSG_SIZE
 #define CFE_MISSION_SB_MAX_SB_MSG_SIZE         CFE_MISSION_SB_CFGVAL(MAX_SB_MSG_SIZE)
 #define DEFAULT_CFE_MISSION_SB_MAX_SB_MSG_SIZE 32768
+#endif
 
 /**
 **  \cfesbcfg Maximum Number of pipes that SB command/telemetry messages may hold
@@ -67,8 +69,10 @@
 **       to exceed the max length.
 **
 */
+#ifndef CFE_MISSION_SB_MAX_PIPES
 #define CFE_MISSION_SB_MAX_PIPES         CFE_MISSION_SB_CFGVAL(MAX_PIPES)
 #define DEFAULT_CFE_MISSION_SB_MAX_PIPES 32
+#endif
 
 /**
 **  \cfesbcfg Maximum Number of subscription entries per subscription report packet
@@ -79,7 +83,9 @@
 **  \par Limits
 **       Must not cause the size of the subscription report telemetry packet to exceed mission limits
 */
+#ifndef CFE_MISSION_SB_SUB_ENTRIES_PER_PKT
 #define CFE_MISSION_SB_SUB_ENTRIES_PER_PKT         CFE_MISSION_SB_CFGVAL(SUB_ENTRIES_PER_PKT)
 #define DEFAULT_CFE_MISSION_SB_SUB_ENTRIES_PER_PKT 20
+#endif
 
 #endif

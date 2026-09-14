@@ -30,6 +30,12 @@ target_include_directories(coverage-sb-ALL-testrunner PRIVATE
     ${CFE_SB_SOURCE_DIR}/fsw/src
 )
 
+# Compile the generic observer seam into the SB coverage binary. The test
+# supplies a deterministic observer implementation in sb_UT.c.
+foreach(target coverage-sb-ALL-object coverage-sb-ALL-testrunner)
+    target_compile_definitions(${target} PRIVATE CFE_SB_OBSERVER_ENABLED)
+endforeach()
+
 # The SB tests currently link with the _real_ SBR implementation (not a stub)
 target_link_libraries(coverage-sb-ALL-testrunner ut_core_private_stubs sbr)
 
@@ -37,4 +43,3 @@ target_link_libraries(coverage-sb-ALL-testrunner ut_core_private_stubs sbr)
 if (CFE_EDS_ENABLED)
     target_link_libraries(coverage-sb-ALL-testrunner ut_edslib_stubs ut_missionlib_stubs)
 endif()
-

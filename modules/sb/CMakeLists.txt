@@ -17,6 +17,13 @@ set(sb_SOURCES
     fsw/src/cfe_sb_objtab.c
 )
 
+# A target may supply an observer for successful Software Bus deliveries.
+# No observer is built by default, so flight targets retain the normal SB path
+# without toolchain-specific weak symbols or an additional runtime dependency.
+if (CFE_SB_OBSERVER_SOURCE)
+  list(APPEND sb_SOURCES ${CFE_SB_OBSERVER_SOURCE})
+endif()
+
 if (CFE_EDS_ENABLED)
   # Use EDS-based message dispatch
   list(APPEND sb_SOURCES
@@ -32,6 +39,14 @@ else()
 endif()
 
 add_library(sb STATIC ${sb_SOURCES})
+
+if (CFE_SB_OBSERVER_SOURCE)
+  target_compile_definitions(sb PRIVATE CFE_SB_OBSERVER_ENABLED)
+  target_include_directories(sb PRIVATE
+    fsw/src
+    ${CFE_SB_OBSERVER_INCLUDE_DIRS}
+  )
+endif()
 
 target_include_directories(sb PUBLIC fsw/inc)
 target_link_libraries(sb PRIVATE core_private)

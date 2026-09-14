@@ -1801,6 +1801,7 @@ void Test_Unsubscribe_GetDestPtr(void);
 **        This function does not return a value.
 ******************************************************************************/
 void Test_TransmitMsg_API(void);
+void Test_MessageObserver(void);
 
 /*****************************************************************************/
 /**

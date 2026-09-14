@@ -1409,6 +1409,7 @@ CFE_Status_t CFE_SB_ReceiveBuffer(CFE_SB_Buffer_t **BufPtr, CFE_SB_PipeId_t Pipe
 {
     CFE_SB_ReceiveTxn_State_t  TxnBuf;
     CFE_SB_MessageTxn_State_t *Txn;
+    CFE_Status_t               Status;
 
     Txn = CFE_SB_ReceiveTxn_Init(&TxnBuf, BufPtr);
 
@@ -1420,6 +1421,13 @@ CFE_Status_t CFE_SB_ReceiveBuffer(CFE_SB_Buffer_t **BufPtr, CFE_SB_PipeId_t Pipe
     if (CFE_SB_MessageTxn_IsOK(Txn))
     {
         CFE_SB_ReceiveTxn_SetPipeId(Txn, PipeId);
+
+#ifdef CFE_SB_OBSERVER_ENABLED
+        if (CFE_SB_MessageTxn_IsOK(Txn))
+        {
+            CFE_SB_Observer_BeginReceive(PipeId, TimeOut == CFE_SB_POLL);
+        }
+#endif
 
         /*
          * Set the verify flag true by default -
@@ -1441,7 +1449,23 @@ CFE_Status_t CFE_SB_ReceiveBuffer(CFE_SB_Buffer_t **BufPtr, CFE_SB_PipeId_t Pipe
 
     CFE_SB_MessageTxn_ReportEvents(Txn);
 
-    return CFE_SB_MessageTxn_GetStatus(Txn);
+    Status = CFE_SB_MessageTxn_GetStatus(Txn);
+#ifdef CFE_SB_OBSERVER_ENABLED
+    if (Status == CFE_SUCCESS && BufPtr != NULL && *BufPtr != NULL)
+    {
+        CFE_SB_Observer_MessageReceived(CFE_SB_MessageTxn_GetRoutingMsgId(Txn), PipeId, *BufPtr);
+    }
+#endif
+
+    /* A positive timeout remains a timed receive even when simulated time
+     * advances past its absolute deadline before the queue operation starts.
+     * The internal OS_CHECK fallback reports an empty queue as NO_MESSAGE,
+     * which callers correctly treat as the result of CFE_SB_POLL and several
+     * flight apps treat as fatal. Preserve the public timeout contract. */
+    if (Status == CFE_SB_NO_MESSAGE && TimeOut > 0)
+        Status = CFE_SB_TIME_OUT;
+
+    return Status;
 }
 
 /*----------------------------------------------------------------
@@ -1470,6 +1494,12 @@ CFE_Status_t CFE_SB_ReceiveBufferWithRoute(CFE_SB_PipeId_t         PipeId,
     if (CFE_SB_MessageTxn_IsOK(Txn))
     {
         CFE_SB_ReceiveTxn_SetPipeId(Txn, PipeId);
+#ifdef CFE_SB_OBSERVER_ENABLED
+        if (CFE_SB_MessageTxn_IsOK(Txn))
+        {
+            CFE_SB_Observer_BeginReceive(PipeId, TimeOut == CFE_SB_POLL);
+        }
+#endif
         CFE_SB_MessageTxn_SetEndpoint(Txn, IsTermination);
     }
 
@@ -1489,6 +1519,13 @@ CFE_Status_t CFE_SB_ReceiveBufferWithRoute(CFE_SB_PipeId_t         PipeId,
     }
 
     CFE_SB_MessageTxn_ReportEvents(Txn);
+
+#ifdef CFE_SB_OBSERVER_ENABLED
+    if (CFE_SB_MessageTxn_GetStatus(Txn) == CFE_SUCCESS && BufPtr != NULL && *BufPtr != NULL)
+    {
+        CFE_SB_Observer_MessageReceived(CFE_SB_MessageTxn_GetRoutingMsgId(Txn), PipeId, *BufPtr);
+    }
+#endif
 
     return CFE_SB_MessageTxn_GetStatus(Txn);
 }
@@ -1621,6 +1658,10 @@ CFE_Status_t CFE_SB_TransmitBuffer(CFE_SB_Buffer_t *BufPtr, bool IsOrigination)
         CFE_SB_TransmitTxn_Execute(Txn, BufPtr);
     }
 
+#ifdef CFE_SB_OBSERVER_ENABLED
+    CFE_SB_Observer_EndTransmit();
+#endif
+
     /* send an event for each pipe write error that may have occurred */
     CFE_SB_MessageTxn_ReportEvents(Txn);
 
@@ -1688,6 +1729,10 @@ CFE_Status_t CFE_SB_TransmitMsg(const CFE_MSG_Message_t *MsgPtr, bool IsOriginat
         BufPtr = NULL;
     }
 
+#ifdef CFE_SB_OBSERVER_ENABLED
+    CFE_SB_Observer_EndTransmit();
+#endif
+
     /* send an event for each pipe write error that may have occurred */
     CFE_SB_MessageTxn_ReportEvents(Txn);
 
@@ -1727,6 +1772,10 @@ CFE_Status_t CFE_SB_TransmitBufferWithRoute(CFE_SB_Buffer_t *BufPtr,
     {
         CFE_SB_TransmitTxn_Execute(Txn, BufPtr);
     }
+
+#ifdef CFE_SB_OBSERVER_ENABLED
+    CFE_SB_Observer_EndTransmit();
+#endif
 
     /* send an event for each pipe write error that may have occurred */
     CFE_SB_MessageTxn_ReportEvents(Txn);

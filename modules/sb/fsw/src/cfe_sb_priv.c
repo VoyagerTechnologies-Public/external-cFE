@@ -1165,6 +1165,9 @@ bool CFE_SB_TransmitTxn_PipeHandler(CFE_SB_MessageTxn_State_t *TxnPtr, CFE_SB_Pi
     CFE_SB_DestinationD_t *DestPtr;
     CFE_SB_PipeD_t        *PipeDscPtr;
     CFE_SB_BufferD_t      *BufDscPtr;
+#ifdef CFE_SB_OBSERVER_ENABLED
+    CFE_SB_ObserverToken_t ObserverToken;
+#endif
 
     BufDscPtr = Arg;
 
@@ -1174,8 +1177,16 @@ bool CFE_SB_TransmitTxn_PipeHandler(CFE_SB_MessageTxn_State_t *TxnPtr, CFE_SB_Pi
      * of "FindDestinations" assuming this write will be successful - which
      * is the expected/typical result here.
      */
+#ifdef CFE_SB_OBSERVER_ENABLED
+    ObserverToken = CFE_SB_Observer_BeginDelivery(TxnPtr->RoutingMsgId,
+                                                  ContextPtr->PipeId,
+                                                  &BufDscPtr->Content);
+#endif
     ContextPtr->OsStatus =
         OS_QueuePut(ContextPtr->SysQueueId, &BufDscPtr, sizeof(BufDscPtr), CFE_SB_MessageTxn_GetOsTimeout(TxnPtr));
+#ifdef CFE_SB_OBSERVER_ENABLED
+    CFE_SB_Observer_EndDelivery(ObserverToken, ContextPtr->OsStatus == OS_SUCCESS);
+#endif
 
     /*
      * If it succeeded, nothing else to do.  But if it fails then we must undo the

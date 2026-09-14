@@ -52,6 +52,62 @@
  */
 #define SB_UT_ADD_SUBTEST(Func) UtTest_AddSubTest(Func, SB_ResetUnitTest, NULL, __func__, #Func)
 
+typedef struct
+{
+    uint32                 BeginDeliveryCount;
+    uint32                 EndDeliveryCount;
+    uint32                 EndTransmitCount;
+    uint32                 BeginReceiveCount;
+    uint32                 MessageReceivedCount;
+    bool                   LastDeliverySucceeded;
+    bool                   LastReceiveWasPolling;
+    CFE_SB_MsgId_t         LastMsgId;
+    CFE_SB_PipeId_t        LastPipeId;
+    const CFE_SB_Buffer_t *LastBuffer;
+} SB_UT_ObserverState_t;
+
+static SB_UT_ObserverState_t SB_UT_ObserverState;
+
+CFE_SB_ObserverToken_t CFE_SB_Observer_BeginDelivery(CFE_SB_MsgId_t         RoutingMsgId,
+                                                      CFE_SB_PipeId_t        PipeId,
+                                                      const CFE_SB_Buffer_t *Buffer)
+{
+    SB_UT_ObserverState.BeginDeliveryCount++;
+    SB_UT_ObserverState.LastMsgId = RoutingMsgId;
+    SB_UT_ObserverState.LastPipeId = PipeId;
+    SB_UT_ObserverState.LastBuffer = Buffer;
+    return 1;
+}
+
+void CFE_SB_Observer_EndDelivery(CFE_SB_ObserverToken_t Token, bool Delivered)
+{
+    UtAssert_UINT32_EQ(Token, 1);
+    SB_UT_ObserverState.EndDeliveryCount++;
+    SB_UT_ObserverState.LastDeliverySucceeded = Delivered;
+}
+
+void CFE_SB_Observer_EndTransmit(void)
+{
+    SB_UT_ObserverState.EndTransmitCount++;
+}
+
+void CFE_SB_Observer_BeginReceive(CFE_SB_PipeId_t PipeId, bool Polling)
+{
+    SB_UT_ObserverState.BeginReceiveCount++;
+    SB_UT_ObserverState.LastPipeId = PipeId;
+    SB_UT_ObserverState.LastReceiveWasPolling = Polling;
+}
+
+void CFE_SB_Observer_MessageReceived(CFE_SB_MsgId_t         RoutingMsgId,
+                                     CFE_SB_PipeId_t        PipeId,
+                                     const CFE_SB_Buffer_t *Buffer)
+{
+    SB_UT_ObserverState.MessageReceivedCount++;
+    SB_UT_ObserverState.LastMsgId = RoutingMsgId;
+    SB_UT_ObserverState.LastPipeId = PipeId;
+    SB_UT_ObserverState.LastBuffer = Buffer;
+}
+
 /*
 ** Functions
 */
@@ -3490,6 +3546,7 @@ void Test_MessageTxn_ReportEvents(void)
 */
 void Test_TransmitMsg_API(void)
 {
+    SB_UT_ADD_SUBTEST(Test_MessageObserver);
     SB_UT_ADD_SUBTEST(Test_TransmitMsg_NullPtr);
     SB_UT_ADD_SUBTEST(Test_TransmitMsg_NoSubscribers);
     SB_UT_ADD_SUBTEST(Test_TransmitMsg_MaxMsgSizePlusOne);
@@ -3519,6 +3576,63 @@ void Test_TransmitMsg_API(void)
 
     SB_UT_ADD_SUBTEST(Test_AllocateMessageBuffer);
     SB_UT_ADD_SUBTEST(Test_ReleaseMessageBuffer);
+}
+
+void Test_MessageObserver(void)
+{
+    CFE_SB_Buffer_t *ReceivedBuffer = NULL;
+    CFE_SB_PipeId_t  PipeId = CFE_SB_INVALID_PIPE;
+    CFE_SB_MsgId_t   MsgId = SB_UT_CMD_MID;
+    SB_UT_Test_Cmd_t Command;
+    CFE_MSG_Size_t   Size = sizeof(Command);
+    CFE_MSG_Type_t   Type = CFE_MSG_Type_Cmd;
+
+    memset(&Command, 0, sizeof(Command));
+    memset(&SB_UT_ObserverState, 0, sizeof(SB_UT_ObserverState));
+
+    CFE_UtAssert_SETUP(CFE_SB_CreatePipe(&PipeId, 2, "ObserverPipe"));
+    CFE_UtAssert_SETUP(CFE_SB_Subscribe(MsgId, PipeId));
+    UT_SetDataBuffer(UT_KEY(CFE_MSG_GetMsgId), &MsgId, sizeof(MsgId), false);
+    UT_SetDataBuffer(UT_KEY(CFE_MSG_GetSize), &Size, sizeof(Size), false);
+    UT_SetDataBuffer(UT_KEY(CFE_MSG_GetType), &Type, sizeof(Type), false);
+
+    CFE_UtAssert_SUCCESS(CFE_SB_TransmitMsg(CFE_MSG_PTR(Command.CommandHeader), true));
+    UtAssert_UINT32_EQ(SB_UT_ObserverState.BeginDeliveryCount, 1);
+    UtAssert_UINT32_EQ(SB_UT_ObserverState.EndDeliveryCount, 1);
+    UtAssert_UINT32_EQ(SB_UT_ObserverState.EndTransmitCount, 1);
+    UtAssert_True(SB_UT_ObserverState.LastDeliverySucceeded,
+                  "observer confirms a successful queue write");
+    CFE_UtAssert_MSGID_EQ(SB_UT_ObserverState.LastMsgId, MsgId);
+    UtAssert_True(CFE_RESOURCEID_TEST_EQUAL(SB_UT_ObserverState.LastPipeId, PipeId),
+                  "observer receives the exact destination pipe");
+
+    CFE_UtAssert_SUCCESS(CFE_SB_ReceiveBuffer(&ReceivedBuffer, PipeId, CFE_SB_PEND_FOREVER));
+    UtAssert_UINT32_EQ(SB_UT_ObserverState.BeginReceiveCount, 1);
+    UtAssert_UINT32_EQ(SB_UT_ObserverState.MessageReceivedCount, 1);
+    UtAssert_True(!SB_UT_ObserverState.LastReceiveWasPolling,
+                  "observer distinguishes a blocking receive from a poll");
+    UtAssert_ADDRESS_EQ(SB_UT_ObserverState.LastBuffer, ReceivedBuffer);
+
+    UtAssert_INT32_EQ(CFE_SB_ReceiveBuffer(&ReceivedBuffer, PipeId,
+                                           CFE_SB_POLL),
+                      CFE_SB_NO_MESSAGE);
+    UtAssert_UINT32_EQ(SB_UT_ObserverState.BeginReceiveCount, 2);
+    UtAssert_UINT32_EQ(SB_UT_ObserverState.MessageReceivedCount, 1);
+    UtAssert_True(SB_UT_ObserverState.LastReceiveWasPolling,
+                  "observer identifies a poll-only queue receive");
+
+    UT_SetDeferredRetcode(UT_KEY(OS_QueuePut), 1, OS_ERROR);
+    UT_SetDataBuffer(UT_KEY(CFE_MSG_GetMsgId), &MsgId, sizeof(MsgId), false);
+    UT_SetDataBuffer(UT_KEY(CFE_MSG_GetSize), &Size, sizeof(Size), false);
+    UT_SetDataBuffer(UT_KEY(CFE_MSG_GetType), &Type, sizeof(Type), false);
+    CFE_UtAssert_SUCCESS(CFE_SB_TransmitMsg(CFE_MSG_PTR(Command.CommandHeader), true));
+    UtAssert_UINT32_EQ(SB_UT_ObserverState.BeginDeliveryCount, 2);
+    UtAssert_UINT32_EQ(SB_UT_ObserverState.EndDeliveryCount, 2);
+    UtAssert_UINT32_EQ(SB_UT_ObserverState.EndTransmitCount, 2);
+    UtAssert_True(!SB_UT_ObserverState.LastDeliverySucceeded,
+                  "observer rejects a failed queue write");
+
+    CFE_UtAssert_TEARDOWN(CFE_SB_DeletePipe(PipeId));
 }
 
 void Test_TransmitBufferWithRoute(void)
@@ -4438,6 +4552,13 @@ void Test_ReceiveBuffer_Timeout(void)
 
     UT_SetDeferredRetcode(UT_KEY(OS_QueueGet), 1, OS_QUEUE_TIMEOUT);
 
+    UtAssert_INT32_EQ(CFE_SB_ReceiveBuffer(&SBBufPtr, PipeId, TimeOut), CFE_SB_TIME_OUT);
+
+    /* If the absolute deadline expires before the queue call begins, the
+     * internal fallback is OS_CHECK/OS_QUEUE_EMPTY. A positive API timeout
+     * must still be reported as TIME_OUT, never as the polling-only
+     * NO_MESSAGE status. */
+    UT_SetDeferredRetcode(UT_KEY(OS_QueueGet), 1, OS_QUEUE_EMPTY);
     UtAssert_INT32_EQ(CFE_SB_ReceiveBuffer(&SBBufPtr, PipeId, TimeOut), CFE_SB_TIME_OUT);
 
     UtAssert_UINT8_EQ(CFE_SB_Global.HKTlmMsg.Payload.MsgReceiveErrorCounter, 0);

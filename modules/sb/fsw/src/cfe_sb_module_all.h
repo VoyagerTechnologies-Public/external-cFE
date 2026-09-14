@@ -40,6 +40,7 @@
 #include "cfe_sb_core_internal.h"
 
 #include "cfe_sb_priv.h"
+#include "cfe_sb_observer.h"
 #include "cfe_sb_eventids.h"
 #include "cfe_sb_destination_typedef.h"
 #include "cfe_sb_msg.h"

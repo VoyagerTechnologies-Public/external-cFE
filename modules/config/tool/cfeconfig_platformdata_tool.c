@@ -52,6 +52,12 @@ void CFE_ConfigTool_RenderListContent(const char *prefix, const CFE_ConfigTool_L
             ++width;
         }
     }
+    /* Both the count and the rendered identifier use an int. Keep the
+     * dynamic printf field width within its decimal digit capacity. */
+    if (width > 10)
+    {
+        width = 10;
+    }
 
     snprintf(entry_string, sizeof(entry_string), "CFE_CONFIG_%s_CONTENT", prefix);
 

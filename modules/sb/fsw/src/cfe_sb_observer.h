@@ -62,6 +62,13 @@ void CFE_SB_Observer_EndTransmit(void);
  */
 void CFE_SB_Observer_BeginReceive(CFE_SB_PipeId_t PipeId, bool Polling);
 
+/**
+ * Notify the observer from the context of an application task that is about to exit through CFE_ES_ExitApp(). The
+ * task will not receive again, so work routed to its pipe for the activation in progress will never be consumed.
+ * Called by ES, which is why the prototype is repeated there.
+ */
+void CFE_SB_Observer_TaskExit(void);
+
 /** Notify the observer after a buffer was successfully received from a pipe. */
 void CFE_SB_Observer_MessageReceived(CFE_SB_MsgId_t         RoutingMsgId,
                                      CFE_SB_PipeId_t        PipeId,

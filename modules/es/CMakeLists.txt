@@ -36,6 +36,11 @@ endif()
 add_library(es STATIC ${es_SOURCES})
 
 target_include_directories(es PUBLIC fsw/inc)
+
+# ES tells the platform's SB observer when an application task exits, which is the same optional observer SB uses.
+if (CFE_SB_OBSERVER_SOURCE)
+  target_compile_definitions(es PRIVATE CFE_SB_OBSERVER_ENABLED)
+endif()
 target_link_libraries(es PRIVATE core_private)
 
 # Add unit test coverage subdirectory

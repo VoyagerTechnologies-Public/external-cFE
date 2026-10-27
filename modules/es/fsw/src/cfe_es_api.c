@@ -36,6 +36,11 @@
 */
 #include "cfe_es_module_all.h"
 
+#ifdef CFE_SB_OBSERVER_ENABLED
+/* Provided by the platform's SB observer. See cfe_sb_observer.h. */
+void CFE_SB_Observer_TaskExit(void);
+#endif
+
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -293,6 +298,15 @@ void CFE_ES_ExitApp(uint32 ExitStatus)
 {
     int32               ReturnCode;
     CFE_ES_AppRecord_t *AppRecPtr;
+
+#ifdef CFE_SB_OBSERVER_ENABLED
+    /*
+     * Tell the SB observer that this task is leaving before anything else happens, so a platform that accounts for
+     * work delivered to the task can retire it. The application's pipe stays subscribed until the background
+     * clean up runs, and that may need the very clock that the accounting is holding.
+     */
+    CFE_SB_Observer_TaskExit();
+#endif
 
     CFE_ES_LockSharedData(__func__, __LINE__);
 

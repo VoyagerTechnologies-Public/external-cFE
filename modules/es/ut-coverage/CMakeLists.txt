@@ -28,6 +28,10 @@ add_cfe_coverage_test(es
     SUBJECT_SOURCES  ${es_SOURCES}
 )
 
+# ES tells the platform's SB observer when an application task exits. The platform build compiles that call in only when
+# it supplies an observer, so the unit test build always does, with a stand-in observer in es_UT.c.
+target_compile_definitions(coverage-es-ALL-object PRIVATE CFE_SB_OBSERVER_ENABLED)
+
 # This permits UT test cases to directly access private headers in the fsw/src dir
 target_include_directories(coverage-es-ALL-testrunner PRIVATE
     ${CFE_ES_SOURCE_DIR}/fsw/src

@@ -42,6 +42,18 @@
 #include "cfe_config.h"
 #include "target_objtab.h"
 
+/*
+ * Stands in for the platform's SB observer, which ES tells when an application's task exits so a platform that tracks
+ * work delivered to the task can retire it. ES calls it first thing in CFE_ES_ExitApp(). It is compiled into the
+ * subject here, as the platform build does with CFE_SB_OBSERVER_SOURCE.
+ */
+static uint32 ES_UT_ObserverTaskExitCount;
+
+void CFE_SB_Observer_TaskExit(void)
+{
+    ES_UT_ObserverTaskExitCount++;
+}
+
 /* Note this is defined in ut_support, part of core_private */
 int32 dummy_function(void);
 
@@ -3755,14 +3767,18 @@ void TestAPI(void)
     /* Test exiting an app with an init error */
     ES_ResetUnitTest();
     ES_UT_SetupSingleAppId(CFE_ES_AppType_CORE, CFE_ES_AppState_STOPPED, NULL, &UtAppRecPtr, NULL);
+    ES_UT_ObserverTaskExitCount = 0;
     CFE_ES_ExitApp(CFE_ES_RunStatus_CORE_APP_INIT_ERROR);
+    UtAssert_UINT32_EQ(ES_UT_ObserverTaskExitCount, 1);
     CFE_UtAssert_PRINTF(UT_OSP_MESSAGES[UT_OSP_CORE_INIT]);
     CFE_UtAssert_PRINTF(UT_OSP_MESSAGES[UT_OSP_POR_MAX_PROC_RESETS]);
 
     /* Test exiting an app with a runtime error */
     ES_ResetUnitTest();
     ES_UT_SetupSingleAppId(CFE_ES_AppType_CORE, CFE_ES_AppState_STOPPED, NULL, &UtAppRecPtr, NULL);
+    ES_UT_ObserverTaskExitCount = 0;
     CFE_ES_ExitApp(CFE_ES_RunStatus_CORE_APP_RUNTIME_ERROR);
+    UtAssert_UINT32_EQ(ES_UT_ObserverTaskExitCount, 1);
     CFE_UtAssert_PRINTF(UT_OSP_MESSAGES[UT_OSP_CORE_RUNTIME]);
 
     /* Test exiting an app with an exit error */
@@ -3772,7 +3788,9 @@ void TestAPI(void)
     ES_ResetUnitTest();
     ES_UT_SetupSingleAppId(CFE_ES_AppType_CORE, CFE_ES_AppState_STOPPED, "UT", &UtAppRecPtr, NULL);
     UtAppRecPtr->ControlReq.AppControlRequest = CFE_ES_RunStatus_APP_RUN;
+    ES_UT_ObserverTaskExitCount = 0;
     CFE_ES_ExitApp(1000);
+    UtAssert_UINT32_EQ(ES_UT_ObserverTaskExitCount, 1);
     CFE_UtAssert_PRINTF(UT_OSP_MESSAGES[UT_OSP_CORE_APP_EXIT]);
     UtAssert_UINT32_EQ(UtAppRecPtr->ControlReq.AppControlRequest, CFE_ES_RunStatus_APP_ERROR);
 
@@ -3780,7 +3798,9 @@ void TestAPI(void)
     ES_ResetUnitTest();
     ES_UT_SetupSingleAppId(CFE_ES_AppType_CORE, CFE_ES_AppState_STOPPED, "UT", &UtAppRecPtr, NULL);
     UtAppRecPtr->ControlReq.AppControlRequest = CFE_ES_RunStatus_APP_RUN;
+    ES_UT_ObserverTaskExitCount = 0;
     CFE_ES_ExitApp(CFE_ES_RunStatus_UNDEFINED);
+    UtAssert_UINT32_EQ(ES_UT_ObserverTaskExitCount, 1);
     CFE_UtAssert_PRINTF(UT_OSP_MESSAGES[UT_OSP_CORE_APP_EXIT]);
     UtAssert_UINT32_EQ(UtAppRecPtr->ControlReq.AppControlRequest, CFE_ES_RunStatus_APP_ERROR);
 
@@ -3791,11 +3811,13 @@ void TestAPI(void)
     UtAppRecPtr->ControlReq.AppControlRequest = CFE_ES_RunStatus_APP_RUN;
     UT_SetHookFunction(UT_KEY(OS_TaskDelay), (UT_HookFunc_t)ES_UT_TaskDelay_Hook, NULL);
     /* Hook function will modify jmp_val to 1 so we pass the conditional on second time through */
+    ES_UT_ObserverTaskExitCount = 0;
     int jmp_val = setjmp(OS_TaskDelay_jmp_buf);
     if (jmp_val == 0)
     {
         CFE_ES_ExitApp(CFE_ES_RunStatus_APP_EXIT);
     }
+    UtAssert_UINT32_EQ(ES_UT_ObserverTaskExitCount, 1);
     CFE_UtAssert_PRINTF(UT_OSP_MESSAGES[UT_OSP_EXTERNAL_APP_EXIT]);
     UtAssert_UINT32_EQ(UtAppRecPtr->ControlReq.AppControlRequest, CFE_ES_RunStatus_APP_EXIT);
     UT_SetHookFunction(UT_KEY(OS_TaskDelay), NULL, NULL);
